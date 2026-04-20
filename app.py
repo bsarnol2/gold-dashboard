@@ -10,9 +10,13 @@ st.title("📊 Gold Flow Dashboard (GLD / SHNY Timing)")
 # --- DATA FETCH ---
 @st.cache_data
 def load_data():
-    gld = yf.download("GLD", period="2y")
-    shny = yf.download("SHNY", period="2y")
-    return gld, shny
+    try:
+        gld = yf.download("GLD", period="2y", progress=False)
+        shny = yf.download("SHNY", period="2y", progress=False)
+        return gld, shny
+    except Exception as e:
+        st.error(f"Data load failed: {e}")
+        return pd.DataFrame(), pd.DataFrame()
 
 
 gld, shny = load_data()
