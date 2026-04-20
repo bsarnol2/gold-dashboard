@@ -20,6 +20,9 @@ def load_data():
 
 
 gld, shny = load_data()
+if gld.empty or shny.empty:
+    st.error("Failed to load market data. Try refreshing.")
+    st.stop()
 
 # --- CALCULATIONS ---
 
