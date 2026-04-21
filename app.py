@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 import numpy as np
+import requests
 
 st.set_page_config(layout="wide")
 
@@ -17,6 +18,53 @@ def load_data():
     except Exception as e:
         st.error(f"Data load failed: {e}")
         return pd.DataFrame(), pd.DataFrame()
+
+@st.cache_data
+def load_imf_gold_data():
+    url = "https://dataservices.imf.org/REST/SDMX_JSON.svc/CompactData/IFS/M.GOLDMON_..?startPeriod=2015"
+    
+    try:
+        r = requests.get(url)
+        data = r.json()
+
+        series = data['CompactData']['DataSet']['Series']
+
+        records = []
+
+        for country in series:
+            country_name = country.get('@REF_AREA', 'Unknown')
+            obs = country.get('Obs', [])
+
+            for o in obs:
+                records.append({
+                    'Country': country_name,
+                    'Date': o['@TIME_PERIOD'],
+                    'Gold Holdings (Tonnes)': float(o['@OBS_VALUE'])
+                })
+
+        df = pd.DataFrame(records)
+        df['Date'] = pd.to_datetime(df['Date'])
+
+        return df
+
+    except Exception as e:
+        st.error(f"IMF data load failed: {e}")
+        return pd.DataFrame()
+
+def process_cb_purchases(df):
+    if df.empty:
+        return pd.DataFrame()
+
+    df = df.sort_values(['Country', 'Date'])
+
+    df['Change'] = df.groupby('Country')['Gold Holdings (Tonnes)'].diff()
+
+    monthly = df.groupby('Date')['Change'].sum().reset_index()
+
+    monthly = monthly.rename(columns={'Change': 'Net Purchases (Tonnes)'})
+    monthly = monthly.set_index('Date')
+
+    return monthly
 
 
 gld, shny = load_data()
@@ -62,16 +110,12 @@ st.line_chart(gld[['Close', 'MA50', 'MA200']])
 st.subheader("Volatility")
 st.line_chart(volatility)
 
-# --- SIMULATED CENTRAL BANK DATA (PLACEHOLDER) ---
-# Replace this later with real IMF/WGC data
-months = pd.date_range(end=pd.Timestamp.today(), periods=12, freq='MS')
 
-cb_data = pd.DataFrame({
-    'Month': months,
-    'Net Purchases (Tonnes)': np.random.randint(20, 80, size=len(months))
-}).set_index('Month')
+imf_raw = load_imf_gold_data()
+cb_data = process_cb_purchases(imf_raw)
+cb_data = cb_data.tail(24)
 
-st.subheader("Central Bank Buying Trend (Simulated)")
+st.subheader("Central Bank Buying Trend (IMF Data)")
 st.bar_chart(cb_data)
 
 # --- SCORECARD ---
