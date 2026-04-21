@@ -64,7 +64,7 @@ st.line_chart(volatility)
 
 # --- SIMULATED CENTRAL BANK DATA (PLACEHOLDER) ---
 # Replace this later with real IMF/WGC data
-months = pd.date_range(end=pd.Timestamp.today(), periods=12, freq='M')
+months = pd.date_range(end=pd.Timestamp.today(), periods=12, freq='MS')
 cb_data = pd.DataFrame({
     'Month': months,
     'Net Purchases (Tonnes)': np.random.randint(20, 80, size=12)
