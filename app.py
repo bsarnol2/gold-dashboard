@@ -20,9 +20,12 @@ def load_data():
 
 
 gld, shny = load_data()
-if gld.empty or shny.empty:
-    st.error("Failed to load market data. Try refreshing.")
-    st.stop()
+# Fix yfinance column structure
+if isinstance(gld.columns, pd.MultiIndex):
+    gld.columns = gld.columns.get_level_values(0)
+
+if isinstance(shny.columns, pd.MultiIndex):
+    shny.columns = shny.columns.get_level_values(0)
 
 # --- CALCULATIONS ---
 
@@ -35,8 +38,10 @@ volatility = gld['Returns'].rolling(30).std() * np.sqrt(252)
 # --- TOP BAR ---
 col1, col2, col3 = st.columns(3)
 
-col1.metric("GLD Price", f"${gld['Close'].iloc[-1]:.2f}")
-col2.metric("SHNY Price", f"${shny['Close'].iloc[-1]:.2f}")
+gld_price = gld['Close'].dropna().iloc[-1]
+col1.metric("GLD Price", f"${gld_price:.2f}")
+shny_price = shny['Close'].dropna().iloc[-1]
+col2.metric("SHNY Price", f"${shny_price:.2f}")
 col3.metric("30D Volatility", f"{volatility.iloc[-1]:.2%}")
 
 # --- TREND SIGNAL ---
